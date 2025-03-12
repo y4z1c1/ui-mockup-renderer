@@ -1,103 +1,119 @@
-import Image from "next/image";
+'use client';
 
+import { useEffect, useState } from 'react';
+import MockupRenderer from '@/components/MockupRenderer';
+import dynamic from 'next/dynamic';
+import { getFallbackMockups } from '@/utils/mockupLoader';
+
+// this component dynamically loads mockup components
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  // state to store dynamically loaded mockups
+  const [mockups, setMockups] = useState<Record<string, React.ComponentType<any>>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    // function to dynamically import mockup components
+    async function loadMockups() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const mockupModules: Record<string, React.ComponentType<any>> = {};
+
+        // Get the list of mockup files from the API
+        const response = await fetch('/api/mockups');
+
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        const mockupFiles = data.mockups || [];
+
+        if (mockupFiles.length === 0) {
+          console.warn('No mockup files found, using fallbacks');
+          loadFallbackMockups(mockupModules);
+        } else {
+          // Load each mockup component
+          for (const name of mockupFiles) {
+            try {
+              const Component = dynamic(() => import(`@/components/mockups/${name}`).then(mod => mod.default), {
+                loading: () => <div>Loading {name}...</div>,
+                ssr: false,
+              });
+
+              mockupModules[name] = Component;
+              console.log(`Loaded mockup: ${name}`);
+            } catch (err) {
+              console.error(`Failed to load mockup: ${name}`, err);
+            }
+          }
+        }
+
+        setMockups(mockupModules);
+      } catch (error) {
+        console.error('Error loading mockups:', error);
+        setError('Failed to load mockups. Using fallback components.');
+
+        // Load fallback mockups
+        const mockupModules: Record<string, React.ComponentType<any>> = {};
+        loadFallbackMockups(mockupModules);
+        setMockups(mockupModules);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Helper function to load fallback mockups
+    function loadFallbackMockups(mockupModules: Record<string, React.ComponentType<any>>) {
+      const fallbackMockups = getFallbackMockups();
+
+      for (const name of fallbackMockups) {
+        try {
+          const Component = dynamic(() => import(`@/components/mockups/${name}`).then(mod => mod.default), {
+            loading: () => <div>Loading {name}...</div>,
+            ssr: false,
+          });
+
+          mockupModules[name] = Component;
+        } catch (err) {
+          console.error(`Failed to load fallback mockup: ${name}`, err);
+        }
+      }
+    }
+
+    loadMockups();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-4">Loading UI Mockups...</h2>
+          <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <main>
+      {error && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      <MockupRenderer mockups={mockups} />
+    </main>
   );
 }
