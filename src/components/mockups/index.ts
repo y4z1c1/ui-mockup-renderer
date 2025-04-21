@@ -15,6 +15,7 @@ import useCase5Mockups from "./use-case-5";
 import useCase7Mockups from "./use-case-7";
 import useCase8Mockups from "./use-case-8";
 import useCase9Mockups from "./use-case-9";
+import useCase10Mockups from "./use-case-10";
 
 // Create a registry of all mockups with prefixed keys
 const mockups: MockupRegistry = {};
@@ -62,6 +63,11 @@ Object.keys(useCase8Mockups).forEach((key) => {
 // Add use case 9 mockups with prefix
 Object.keys(useCase9Mockups).forEach((key) => {
   mockups[`use-case-9/${key}`] = useCase9Mockups[key];
+});
+
+// Add use case 10 mockups with prefix
+Object.keys(useCase10Mockups).forEach((key) => {
+  mockups[`use-case-10/${key}`] = useCase10Mockups[key];
 });
 
 // Function to add more use cases in the future
